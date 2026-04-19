@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Koperasi Simpan Pinjam</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --green: #1D9E75; --green-dark: #0F6E56; --green-light: #E1F5EE;
+    --green-text: #085041; --bg: #F4F6F5; --card: #ffffff;
+    --border: #e2e8e5; --text: #1a2e25; --muted: #6b8f7e;
+    --danger: #E24B4A; --danger-light: #FCEBEB; --danger-text: #A32D2D;
+    --warn: #BA7517; --warn-light: #FAEEDA; --warn-text: #854F0B;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { background: var(--green-dark); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-date { font-size: 12px; opacity: 0.75; }
+  .nav { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 2px; }
+  .nav-btn { padding: 14px 18px; border: none; background: none; font-size: 13px; font-family: inherit; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; transition: color .15s; }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--green); border-bottom-color: var(--green); }
+  .content { padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* Metrics */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .metric { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .metric-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .metric-value { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .metric-accent { border-left: 3px solid var(--green); }
+
+  /* Buttons */
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--card); font-size: 12px; font-family: inherit; color: var(--text); cursor: pointer; font-weight: 500; transition: background .15s; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-primary:hover { background: var(--green-dark); }
+  .btn-danger { color: var(--danger-text); border-color: #f09595; font-size: 11px; padding: 4px 10px; }
+  .btn-danger:hover { background: var(--danger-light); }
+
+  /* Forms */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-group input, .form-group select { padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; transition: border-color .15s; }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--green); background: #fff; }
+  .form-actions { margin-top: 16px; display: flex; gap: 10px; }
+
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; }
+  .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table th { text-align: left; padding: 10px 12px; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .table td { padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .table tr:last-child td { border-bottom: none; }
+  .table tr:hover td { background: var(--bg); }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-aktif { background: var(--green-light); color: var(--green-text); }
+  .badge-lunas { background: var(--warn-light); color: var(--warn-text); }
+  .badge-menunggak { background: var(--danger-light); color: var(--danger-text); }
+
+  /* Grid layouts */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .two-col, .form-grid { grid-template-columns: 1fr; } .nav-btn { padding: 12px 10px; font-size: 12px; } }
+
+  /* Laporan neraca */
+  .neraca-section { margin-bottom: 18px; }
+  .neraca-section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .neraca-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px solid #f0f4f2; }
+  .neraca-row:last-child { border-bottom: none; }
+  .neraca-row.total { font-weight: 600; font-size: 14px; border-top: 2px solid var(--border); padding-top: 10px; margin-top: 4px; }
+  .neraca-row.total-green { color: var(--green-dark); }
+
+  /* Tabs */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .3s, transform .3s; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+
+  /* Chart wrapper */
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* Summary banner */
+  .summary-banner { background: var(--green); border-radius: var(--radius); padding: 18px 22px; color: #fff; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .summary-banner .label { font-size: 11px; opacity: .8; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .summary-banner .val { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-brand">Koperasi Simpan Pinjam</div>
+    <div class="topbar-date" id="tgl-header"></div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="showTab('simpanan',this)">Simpanan</button>
+    <button class="nav-btn" onclick="showTab('pinjaman',this)">Pinjaman</button>
+    <button class="nav-btn" onclick="showTab('laporan',this)">Laporan</button>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="metric-grid">
+        <div class="metric metric-accent">
+          <div class="metric-label">Total Simpanan</div>
+          <div class="metric-value" id="m-simpanan">Rp 0</div>
+          <div class="metric-sub" id="m-jml-anggota">0 anggota</div>
+        </div>
+        <div class="metric metric-accent">
+          <div class="metric-label">Total Pinjaman</div>
+          <div class="metric-value" id="m-pinjaman">Rp 0</div>
+          <div class="metric-sub" id="m-jml-debitur">0 debitur aktif</div>
+        </div>
+        <div class="metric metric-accent">
+          <div class="metric-label">Sisa Kas</div>
+          <div class="metric-value" id="m-kas">Rp 0</div>
+          <div class="metric-sub">Aset lancar</div>
+        </div>
+        <div class="metric metric-accent">
+          <div class="metric-label">Pendapatan Bunga</div>
+          <div class="metric-value" id="m-bunga">Rp 0</div>
+          <div class="metric-sub">Estimasi bulan ini</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Simpanan Terbaru</span></div>
+          <table class="table"><thead><tr><th>Anggota</th><th>Jenis</th><th>Jumlah</th></tr></thead><tbody id="dash-simpanan"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Pinjaman Aktif</span></div>
+          <table class="table"><thead><tr><th>Anggota</th><th>Pokok</th><th>Status</th></tr></thead><tbody id="dash-pinjaman"></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Grafik Simpanan vs Pinjaman</span></div>
+        <div class="chart-wrap"><canvas id="chartDash" role="img" aria-label="Grafik simpanan dan pinjaman"></canvas></div>
+      </div>
+    </div>
+
+    <!-- SIMPANAN -->
+    <div id="tab-simpanan" class="tab-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Tambah Simpanan</span></div>
+        <div class="form-grid">
+          <div class="form-group"><label>Nama Anggota</label><input id="s-nama" placeholder="Nama lengkap"/></div>
+          <div class="form-group"><label>Jenis Simpanan</label>
+            <select id="s-jenis"><option>Simpanan Pokok</option><option>Simpanan Wajib</option><option>Simpanan Sukarela</option></select>
+          </div>
+          <div class="form-group"><label>Jumlah (Rp)</label><input id="s-jumlah" type="number" placeholder="0"/></div>
+          <div class="form-group"><label>Tanggal</label><input id="s-tgl" type="date"/></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" onclick="tambahSimpanan()">Simpan Data</button></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Daftar Simpanan</span>
+          <span id="total-simpanan-label" style="font-size:13px;font-weight:600;color:var(--green)"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table class="table">
+            <thead><tr><th>#</th><th>Anggota</th><th>Jenis</th><th>Jumlah</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+            <tbody id="tbl-simpanan"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PINJAMAN -->
+    <div id="tab-pinjaman" class="tab-content">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Tambah Pinjaman</span></div>
+        <div class="form-grid">
+          <div class="form-group"><label>Nama Peminjam</label><input id="p-nama" placeholder="Nama lengkap"/></div>
+          <div class="form-group"><label>Jumlah Pinjaman (Rp)</label><input id="p-jumlah" type="number" placeholder="0"/></div>
+          <div class="form-group"><label>Bunga (% / bulan)</label><input id="p-bunga" type="number" value="1.5" step="0.1"/></div>
+          <div class="form-group"><label>Tenor (bulan)</label><input id="p-tenor" type="number" value="12"/></div>
+          <div class="form-group"><label>Tanggal Cair</label><input id="p-tgl" type="date"/></div>
+          <div class="form-group"><label>Status</label>
+            <select id="p-status"><option>Aktif</option><option>Lunas</option><option>Menunggak</option></select>
+          </div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" onclick="tambahPinjaman()">Simpan Data</button></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Daftar Pinjaman</span>
+          <span id="total-pinjaman-label" style="font-size:13px;font-weight:600;color:var(--green)"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table class="table">
+            <thead><tr><th>#</th><th>Anggota</th><th>Pokok</th><th>Bunga</th><th>Tenor</th><th>Angsuran/bln</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbl-pinjaman"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAPORAN -->
+    <div id="tab-laporan" class="tab-content">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Neraca Keuangan</span></div>
+          <div class="neraca-section">
+            <div class="neraca-section-title">Aset</div>
+            <div class="neraca-row"><span>Kas & Bank</span><span id="n-kas">Rp 0</span></div>
+            <div class="neraca-row"><span>Piutang Pinjaman</span><span id="n-piutang">Rp 0</span></div>
+            <div class="neraca-row total"><span>Total Aset</span><span id="n-total-aset">Rp 0</span></div>
+          </div>
+          <div class="neraca-section">
+            <div class="neraca-section-title">Kewajiban & Modal</div>
+            <div class="neraca-row"><span>Simpanan Anggota</span><span id="n-simpanan">Rp 0</span></div>
+            <div class="neraca-row"><span>Modal Koperasi</span><span id="n-modal">Rp 5.000.000</span></div>
+            <div class="neraca-row total total-green"><span>Total Kewajiban + Modal</span><span id="n-total-pasiva">Rp 0</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Laporan Laba Rugi</span></div>
+          <div class="neraca-section">
+            <div class="neraca-section-title">Pendapatan</div>
+            <div class="neraca-row"><span>Pendapatan Bunga Pinjaman</span><span id="lr-bunga">Rp 0</span></div>
+            <div class="neraca-row"><span>Pendapatan Lain-lain</span><span>Rp 500.000</span></div>
+            <div class="neraca-row total"><span>Total Pendapatan</span><span id="lr-total-pend">Rp 0</span></div>
+          </div>
+          <div class="neraca-section">
+            <div class="neraca-section-title">Beban</div>
+            <div class="neraca-row"><span>Beban Operasional</span><span>Rp 750.000</span></div>
+            <div class="neraca-row"><span>Beban Administrasi</span><span>Rp 250.000</span></div>
+            <div class="neraca-row total total-green"><span>SHU (Laba Bersih)</span><span id="lr-shu">Rp 0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Rekap Transaksi</span>
+          <button class="btn" onclick="cetakLaporan()">Cetak Laporan</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="table">
+            <thead><tr><th>Jenis</th><th>Jumlah Transaksi</th><th>Total Nilai</th></tr></thead>
+            <tbody id="tbl-rekap"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA STORE ──────────────────────────────────────────────────────────────
+const MODAL_KOPERASI = 5000000;
+
+const state = {
+  simpanan: [
+    {id:1,nama:'Budi Santoso',jenis:'Simpanan Wajib',jumlah:500000,tgl:'2025-01-05'},
+    {id:2,nama:'Siti Rahayu',jenis:'Simpanan Pokok',jumlah:1000000,tgl:'2025-01-10'},
+    {id:3,nama:'Ahmad Fauzi',jenis:'Simpanan Sukarela',jumlah:2000000,tgl:'2025-01-15'},
+  ],
+  pinjaman: [
+    {id:1,nama:'Budi Santoso',jumlah:5000000,bunga:1.5,tenor:12,tgl:'2025-01-03',status:'Aktif'},
+    {id:2,nama:'Dewi Lestari',jumlah:10000000,bunga:1.5,tenor:24,tgl:'2024-12-01',status:'Aktif'},
+    {id:3,nama:'Eko Prasetyo',jumlah:3000000,bunga:1.5,tenor:6,tgl:'2024-11-01',status:'Lunas'},
+  ]
+};
+
+// ── UTILS ───────────────────────────────────────────────────────────────────
+const fmt = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const angsuran = (j, b, t) => { const r = b/100; return Math.round(j*r*Math.pow(1+r,t)/(Math.pow(1+r,t)-1)); };
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── NAVIGATION ──────────────────────────────────────────────────────────────
+let chartInst = null;
+function showTab(t, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  btn.classList.add('active');
+  if (t === 'dashboard') renderDashboard();
+  if (t === 'simpanan') renderSimpanan();
+  if (t === 'pinjaman') renderPinjaman();
+  if (t === 'laporan') renderLaporan();
+}
+
+// ── DASHBOARD ───────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const totS = state.simpanan.reduce((a,b) => a+b.jumlah, 0);
+  const aktifP = state.pinjaman.filter(p => p.status === 'Aktif');
+  const totP = aktifP.reduce((a,b) => a+b.jumlah, 0);
+  const kas = Math.max(totS + MODAL_KOPERASI - totP, 0);
+  const bunga = aktifP.reduce((a,b) => a+(b.jumlah*b.bunga/100), 0);
+
+  document.getElementById('m-simpanan').textContent = fmt(totS);
+  document.getElementById('m-pinjaman').textContent = fmt(totP);
+  document.getElementById('m-kas').textContent = fmt(kas);
+  document.getElementById('m-bunga').textContent = fmt(bunga);
+  document.getElementById('m-jml-anggota').textContent = [...new Set(state.simpanan.map(s=>s.nama))].length + ' anggota';
+  document.getElementById('m-jml-debitur').textContent = aktifP.length + ' debitur aktif';
+
+  document.getElementById('dash-simpanan').innerHTML = state.simpanan.slice(-4).reverse()
+    .map(s => `<tr><td>${s.nama}</td><td>${s.jenis.replace('Simpanan ','')}</td><td>${fmt(s.jumlah)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">Belum ada data</td></tr>';
+
+  document.getElementById('dash-pinjaman').innerHTML = aktifP.slice(0,4)
+    .map(p => `<tr><td>${p.nama}</td><td>${fmt(p.jumlah)}</td><td><span class="badge badge-aktif">Aktif</span></td></tr>`).join('') || '<tr><td colspan="3" class="empty">Belum ada data</td></tr>';
+
+  const months = ['Agt','Sep','Okt','Nov','Des','Jan'];
+  const sData = [1200000,1800000,2100000,2500000,3000000,totS];
+  const pData = [4000000,5500000,7000000,8000000,9000000,totP];
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById('chartDash').getContext('2d'), {
+    type: 'bar',
+    data: { labels: months, datasets: [
+      { label: 'Simpanan', data: sData, backgroundColor: '#5DCAA5', borderRadius: 5, borderSkipped: false },
+      { label: 'Pinjaman', data: pData, backgroundColor: '#85B7EB', borderRadius: 5, borderSkipped: false }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } } },
+        y: { grid: { color: '#f0f4f2' }, ticks: { callback: v => 'Rp '+(v/1000000).toFixed(1)+'jt', font: { family: 'Plus Jakarta Sans', size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── SIMPANAN ─────────────────────────────────────────────────────────────────
+function renderSimpanan() {
+  const total = state.simpanan.reduce((a,b) => a+b.jumlah, 0);
+  document.getElementById('total-simpanan-label').textContent = 'Total: ' + fmt(total);
+  const tbody = document.getElementById('tbl-simpanan');
+  if (!state.simpanan.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Belum ada data simpanan</td></tr>'; return; }
+  tbody.innerHTML = state.simpanan.map((s,i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:500">${s.nama}</td>
+      <td>${s.jenis}</td>
+      <td style="font-weight:500">${fmt(s.jumlah)}</td>
+      <td style="color:var(--muted)">${s.tgl}</td>
+      <td><button class="btn btn-danger" onclick="hapusSimpanan(${s.id})">Hapus</button></td>
+    </tr>`).join('');
+}
+
+function tambahSimpanan() {
+  const nama = document.getElementById('s-nama').value.trim();
+  const jenis = document.getElementById('s-jenis').value;
+  const jumlah = parseFloat(document.getElementById('s-jumlah').value) || 0;
+  const tgl = document.getElementById('s-tgl').value || new Date().toISOString().split('T')[0];
+  if (!nama) { toast('Nama anggota harus diisi!'); return; }
+  if (!jumlah) { toast('Jumlah simpanan harus diisi!'); return; }
+  state.simpanan.push({ id: Date.now(), nama, jenis, jumlah, tgl });
+  document.getElementById('s-nama').value = '';
+  document.getElementById('s-jumlah').value = '';
+  renderSimpanan();
+  toast('Simpanan berhasil ditambahkan!');
+}
+
+function hapusSimpanan(id) {
+  if (!confirm('Hapus data simpanan ini?')) return;
+  state.simpanan = state.simpanan.filter(s => s.id !== id);
+  renderSimpanan();
+  toast('Data simpanan dihapus.');
+}
+
+// ── PINJAMAN ─────────────────────────────────────────────────────────────────
+function renderPinjaman() {
+  const aktif = state.pinjaman.filter(p => p.status === 'Aktif').reduce((a,b)=>a+b.jumlah,0);
+  document.getElementById('total-pinjaman-label').textContent = 'Aktif: ' + fmt(aktif);
+  const tbody = document.getElementById('tbl-pinjaman');
+  if (!state.pinjaman.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">Belum ada data pinjaman</td></tr>'; return; }
+  tbody.innerHTML = state.pinjaman.map((p,i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:500">${p.nama}</td>
+      <td>${fmt(p.jumlah)}</td>
+      <td>${p.bunga}%</td>
+      <td>${p.tenor} bln</td>
+      <td style="font-weight:500;color:var(--green-dark)">${fmt(angsuran(p.jumlah,p.bunga,p.tenor))}</td>
+      <td><span class="badge badge-${p.status.toLowerCase()}">${p.status}</span></td>
+      <td><button class="btn btn-danger" onclick="hapusPinjaman(${p.id})">Hapus</button></td>
+    </tr>`).join('');
+}
+
+function tambahPinjaman() {
+  const nama = document.getElementById('p-nama').value.trim();
+  const jumlah = parseFloat(document.getElementById('p-jumlah').value) || 0;
+  const bunga = parseFloat(document.getElementById('p-bunga').value) || 1.5;
+  const tenor = parseInt(document.getElementById('p-tenor').value) || 12;
+  const tgl = document.getElementById('p-tgl').value || new Date().toISOString().split('T')[0];
+  const status = document.getElementById('p-status').value;
+  if (!nama) { toast('Nama peminjam harus diisi!'); return; }
+  if (!jumlah) { toast('Jumlah pinjaman harus diisi!'); return; }
+  state.pinjaman.push({ id: Date.now(), nama, jumlah, bunga, tenor, tgl, status });
+  document.getElementById('p-nama').value = '';
+  document.getElementById('p-jumlah').value = '';
+  renderPinjaman();
+  toast('Data pinjaman berhasil ditambahkan!');
+}
+
+function hapusPinjaman(id) {
+  if (!confirm('Hapus data pinjaman ini?')) return;
+  state.pinjaman = state.pinjaman.filter(p => p.id !== id);
+  renderPinjaman();
+  toast('Data pinjaman dihapus.');
+}
+
+// ── LAPORAN ───────────────────────────────────────────────────────────────────
+function renderLaporan() {
+  const totS = state.simpanan.reduce((a,b) => a+b.jumlah, 0);
+  const aktifP = state.pinjaman.filter(p => p.status === 'Aktif');
+  const totP = aktifP.reduce((a,b) => a+b.jumlah, 0);
+  const kas = Math.max(totS + MODAL_KOPERASI - totP, 0);
+  const bunga = aktifP.reduce((a,b) => a+(b.jumlah*b.bunga/100), 0);
+  const totalPend = bunga + 500000;
+  const totalBeban = 750000 + 250000;
+  const shu = totalPend - totalBeban;
+
+  document.getElementById('n-kas').textContent = fmt(kas);
+  document.getElementById('n-piutang').textContent = fmt(totP);
+  document.getElementById('n-total-aset').textContent = fmt(kas + totP);
+  document.getElementById('n-simpanan').textContent = fmt(totS);
+  document.getElementById('n-total-pasiva').textContent = fmt(totS + MODAL_KOPERASI);
+  document.getElementById('lr-bunga').textContent = fmt(bunga);
+  document.getElementById('lr-total-pend').textContent = fmt(totalPend);
+  document.getElementById('lr-shu').textContent = fmt(Math.max(shu, 0));
+
+  const jenis = ['Simpanan Pokok','Simpanan Wajib','Simpanan Sukarela'];
+  let rekap = jenis.map(j => {
+    const filtered = state.simpanan.filter(s => s.jenis === j);
+    return `<tr><td>${j}</td><td style="color:var(--muted)">${filtered.length} transaksi</td><td style="font-weight:500">${fmt(filtered.reduce((a,b)=>a+b.jumlah,0))}</td></tr>`;
+  });
+  rekap.push(`<tr><td>Pinjaman Aktif</td><td style="color:var(--muted)">${aktifP.length} debitur</td><td style="font-weight:500">${fmt(totP)}</td></tr>`);
+  const lunas = state.pinjaman.filter(p=>p.status==='Lunas');
+  rekap.push(`<tr><td>Pinjaman Lunas</td><td style="color:var(--muted)">${lunas.length} debitur</td><td style="font-weight:500">${fmt(lunas.reduce((a,b)=>a+b.jumlah,0))}</td></tr>`);
+  document.getElementById('tbl-rekap').innerHTML = rekap.join('');
+}
+
+function cetakLaporan() {
+  window.print();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+const today = new Date();
+document.getElementById('tgl-header').textContent = today.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+document.getElementById('s-tgl').value = today.toISOString().split('T')[0];
+document.getElementById('p-tgl').value = today.toISOString().split('T')[0];
+renderDashboard();
+</script>
+</body>
+</html>
